@@ -9,12 +9,9 @@ import h5py
 import numpy as np
 from PIL import Image
 
-
-
 def write_hdf5(arr,outfile):
   with h5py.File(outfile,"w") as f:
     f.create_dataset("image", data=arr, dtype=arr.dtype)
-
 
 #------------Path of the images --------------------------------------------------------------
 #train
@@ -37,26 +34,39 @@ def get_datasets(imgs_dir,groundTruth_dir,borderMasks_dir,train_test="null"):
     imgs = np.empty((Nimgs,height,width,channels))
     groundTruth = np.empty((Nimgs,height,width))
     border_masks = np.empty((Nimgs,height,width))
-    for path, subdirs, files in os.walk(imgs_dir): #list all files, directories in the path
+    
+    for path, subdirs, files in os.walk(imgs_dir):
+        # 对文件进行排序，确保顺序正确
+        files.sort()
         for i in range(len(files)):
             #original
-            print("original image: " +files[i])
+            print("original image: " + files[i])
             img = Image.open(imgs_dir+files[i])
             imgs[i] = np.asarray(img)
+            
+            # 根据文件名提取编号部分
+            if train_test == "train":
+                # training文件格式: 21_training.tif, 提取"21"
+                file_num = files[i].split('_')[0]
+            else:
+                # test文件格式: 01_test.tif, 提取"01"
+                file_num = files[i].split('_')[0]
+            
             #corresponding ground truth
-            groundTruth_name = files[i][0:2] + "_manual1.gif"
+            groundTruth_name = file_num + "_manual1.gif"
             print("ground truth name: " + groundTruth_name)
             g_truth = Image.open(groundTruth_dir + groundTruth_name)
             groundTruth[i] = np.asarray(g_truth)
+            
             #corresponding border masks
-            border_masks_name = ""
             if train_test=="train":
-                border_masks_name = files[i][0:2] + "_training_mask.gif"
+                border_masks_name = file_num + "_training_mask.gif"
             elif train_test=="test":
-                border_masks_name = files[i][0:2] + "_test_mask.gif"
+                border_masks_name = file_num + "_test_mask.gif"
             else:
                 print("specify if train or test!!")
                 exit()
+                
             print("border masks name: " + border_masks_name)
             b_mask = Image.open(borderMasks_dir + border_masks_name)
             border_masks[i] = np.asarray(b_mask)
@@ -77,6 +87,7 @@ def get_datasets(imgs_dir,groundTruth_dir,borderMasks_dir,train_test="null"):
 
 if not os.path.exists(dataset_path):
     os.makedirs(dataset_path)
+    
 #getting the training datasets
 imgs_train, groundTruth_train, border_masks_train = get_datasets(original_imgs_train,groundTruth_imgs_train,borderMasks_imgs_train,"train")
 print("saving train datasets")
